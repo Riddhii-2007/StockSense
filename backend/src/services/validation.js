@@ -17,9 +17,14 @@ function scoreMatch(query, candidates) {
   for (const c of candidates) {
     const name = norm(c.name);
     const code = norm(c.code);
-    if (name === q || code === q) return { row: c, how: 'exact' };
-    if (name.startsWith(q) || code.startsWith(q)) return { row: c, how: 'prefix' };
-    if (name.includes(q) || code.includes(q)) return { row: c, how: 'partial' };
+    
+    if (name === q || (code && code === q)) return { row: c, how: 'exact' };
+    
+    if (name.startsWith(q) || (code && code.startsWith(q))) return { row: c, how: 'prefix' };
+    if (q.startsWith(name) || (code && q.startsWith(code))) return { row: c, how: 'prefix' };
+    
+    if (name.includes(q) || (code && code.includes(q))) return { row: c, how: 'partial' };
+    if (q.includes(name) || (code && q.includes(code))) return { row: c, how: 'partial' };
   }
   return null;
 }

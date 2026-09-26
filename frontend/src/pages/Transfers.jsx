@@ -43,7 +43,11 @@ const Transfers = () => {
               <option>Completed</option>
             </select>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95">
+          <button 
+            disabled
+            title="Use the AI Command Bar for transfers"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95 opacity-50 cursor-not-allowed"
+          >
             <Plus className="w-4 h-4" />
             New Transfer
           </button>
@@ -188,7 +192,11 @@ const Transfers = () => {
             </div>
 
             <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
-              <button className="w-full py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
+              <button 
+                disabled
+                title="Not implemented yet"
+                className="w-full py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors opacity-50 cursor-not-allowed"
+              >
                 Download Receipt
               </button>
             </div>

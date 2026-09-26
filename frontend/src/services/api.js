@@ -178,6 +178,9 @@ export const api = {
       throw new Error("Could not parse command");
     }
     
+    const sourceImpact = validation.impacts?.[0]?.locations?.find(l => l.delta < 0) || {};
+    const destImpact = validation.impacts?.[0]?.locations?.find(l => l.delta > 0) || {};
+
     return {
       isValid: validation.ok,
       intent: 'Internal Transfer',
@@ -186,6 +189,15 @@ export const api = {
       destination: validation.resolved.destLocation?.name,
       quantity: validation.impacts?.[0]?.quantity || 0,
       reason: validation.errors?.[0] || null,
+      
+      sourceBefore: sourceImpact.before || 0,
+      sourceAfter: sourceImpact.after || 0,
+      destBefore: destImpact.before || 0,
+      destAfter: destImpact.after || 0,
+      totalBefore: (sourceImpact.before || 0) + (destImpact.before || 0),
+      totalAfter: (sourceImpact.after || 0) + (destImpact.after || 0),
+      available: sourceImpact.before || 0,
+
       impacts: validation.impacts?.[0]?.locations || [],
       normalizedPayload: validation.normalized
     };

@@ -49,12 +49,20 @@ const Ledger = () => {
               <option>Main Store</option>
               <option>Production Rack</option>
             </select>
-            <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
+            <button 
+              disabled
+              title="Not implemented yet"
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors opacity-50 cursor-not-allowed"
+            >
               <Filter className="w-4 h-4" />
               More Filters
             </button>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+          <button 
+            disabled
+            title="Not implemented yet"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm opacity-50 cursor-not-allowed"
+          >
             <Download className="w-4 h-4" />
             Export CSV
           </button>

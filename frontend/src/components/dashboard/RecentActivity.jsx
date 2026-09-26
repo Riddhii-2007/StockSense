@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const RecentActivity = ({ activities }) => {
   if (!activities) return null;
 
@@ -18,7 +20,11 @@ const RecentActivity = ({ activities }) => {
           <h3 className="text-lg font-bold text-slate-900">Recent Ledger Operations</h3>
           <p className="text-sm text-slate-500 mt-0.5">Real-time ledger entries confirmed by operators</p>
         </div>
-        <button className="px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-colors">
+        <button 
+          disabled
+          title="Not implemented yet"
+          className="px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-colors opacity-50 cursor-not-allowed"
+        >
           Export CSV
         </button>
       </div>
@@ -75,7 +81,7 @@ const RecentActivity = ({ activities }) => {
       
       <div className="p-4 bg-slate-50/50 flex items-center justify-between font-mono text-[11px] text-slate-500 border-t border-slate-100 mt-auto">
         <span>Displaying latest 5 of 1,294 ledger postings</span>
-        <button className="text-slate-900 font-bold hover:underline">View Entire Stock Ledger →</button>
+        <Link to="/ledger" className="text-slate-900 font-bold hover:underline">View Entire Stock Ledger →</Link>
       </div>
     </div>
   );

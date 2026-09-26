@@ -46,7 +46,11 @@ const AttentionRequired = ({ items }) => {
                 <p className="text-sm text-slate-600 mt-0.5">{item.message}</p>
               </div>
             </div>
-            <button className={`self-end sm:self-center px-4 py-2 rounded-md text-sm font-semibold shadow-sm transition-colors whitespace-nowrap ${getButtonStyle(item.severity)}`}>
+            <button 
+              disabled
+              title="Not implemented yet"
+              className={`self-end sm:self-center px-4 py-2 rounded-md text-sm font-semibold shadow-sm transition-colors whitespace-nowrap opacity-50 cursor-not-allowed ${getButtonStyle(item.severity)}`}
+            >
               {item.action}
             </button>
           </div>

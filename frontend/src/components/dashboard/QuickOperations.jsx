@@ -1,4 +1,5 @@
 import { PlusCircle, Truck, ArrowRightLeft, SlidersHorizontal } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const QuickOperations = () => {
   return (
@@ -9,37 +10,37 @@ const QuickOperations = () => {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 flex-1">
-        <button className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group">
+        <Link to="/receipts" className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group text-left">
           <div className="flex items-center gap-3">
             <PlusCircle className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform" />
             <span className="font-semibold text-slate-900 text-sm">New Receipt (PO)</span>
           </div>
           <span className="font-mono text-[11px] text-slate-500">Inbound</span>
-        </button>
+        </Link>
 
-        <button className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group">
+        <Link to="/deliveries" className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group text-left">
           <div className="flex items-center gap-3">
             <Truck className="w-5 h-5 text-indigo-600 group-hover:scale-110 transition-transform" />
             <span className="font-semibold text-slate-900 text-sm">New Delivery (SO)</span>
           </div>
           <span className="font-mono text-[11px] text-slate-500">Outbound</span>
-        </button>
+        </Link>
 
-        <button className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group">
+        <Link to="/transfers" className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group text-left">
           <div className="flex items-center gap-3">
             <ArrowRightLeft className="w-5 h-5 text-slate-700 group-hover:scale-110 transition-transform" />
             <span className="font-semibold text-slate-900 text-sm">Internal Transfer</span>
           </div>
           <span className="font-mono text-[11px] text-slate-500">Cross-Node</span>
-        </button>
+        </Link>
 
-        <button className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group">
+        <Link to="/adjustments" className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-colors group text-left">
           <div className="flex items-center gap-3">
             <SlidersHorizontal className="w-5 h-5 text-slate-500 group-hover:scale-110 transition-transform" />
             <span className="font-semibold text-slate-900 text-sm">Stock Adjustment</span>
           </div>
           <span className="font-mono text-[11px] text-slate-500">Audit Count</span>
-        </button>
+        </Link>
       </div>
 
       <div className="pt-3 text-center border-t border-slate-100">

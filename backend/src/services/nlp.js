@@ -75,14 +75,15 @@ export function parseDeterministic(text) {
   let sourceLocation = null;
   let destLocation = null;
   const fromTo = raw.match(/\bfrom\s+([a-z0-9 \-]+?)\s+to\s+([a-z0-9 \-]+?)(?=\s*(?:$|[.,;]|\bfor\b|\bbecause\b|\bto\b.*\bby\b))/i);
+  let fromMatch, intoMatch;
   if (fromTo) {
     sourceLocation = fromTo[1].trim();
     destLocation = fromTo[2].trim();
   } else {
-    const from = raw.match(/\bfrom\s+([a-z0-9 \-]+?)(?=\s*(?:$|[.,;]|\bfor\b|\bto\b|\bin\b))/i);
-    const into = raw.match(/\b(?:into|to|in)\s+([a-z0-9 \-]+?)(?=\s*(?:$|[.,;]|\bfor\b|\bbecause\b|\bby\b))/i);
-    if (from) sourceLocation = from[1].trim();
-    if (into) destLocation = into[1].trim();
+    fromMatch = raw.match(/\bfrom\s+([a-z0-9 \-]+?)(?=\s*(?:$|[.,;]|\bfor\b|\bto\b|\bin\b))/i);
+    intoMatch = raw.match(/\b(?:into|to|in)\s+([a-z0-9 \-]+?)(?=\s*(?:$|[.,;]|\bfor\b|\bbecause\b|\bby\b))/i);
+    if (fromMatch) sourceLocation = fromMatch[1].trim();
+    if (intoMatch) destLocation = intoMatch[1].trim();
   }
 
   // What is left after removing verbs, quantity, and location phrases is the product.
@@ -90,9 +91,8 @@ export function parseDeterministic(text) {
   if (fromTo) {
     rest = rest.replace(fromTo[0], ' ');
   } else {
-    if (from) rest = rest.replace(from[0], ' ');
-    const into = rest.match(/\b(?:into|to|in)\s+([a-z0-9 \-]+?)(?=\s*(?:$|[.,;]))/i);
-    if (into) rest = rest.replace(into[0], ' ');
+    if (fromMatch) rest = rest.replace(fromMatch[0], ' ');
+    if (intoMatch) rest = rest.replace(intoMatch[0], ' ');
   }
   rest = rest.replace(/-?\d+(?:\.\d+)?/g, ' ');
   const product = rest.replace(/\s{2,}/g, ' ').replace(/^[\s,.\-]+|[\s,.\-]+$/g, '').trim() || null;
