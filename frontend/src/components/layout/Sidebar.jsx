@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   ReceiptText,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 
 const mainNav = [
@@ -108,6 +109,16 @@ const Sidebar = () => {
           <button className="group flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200">
             <HelpCircle className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
             <span>Help & Docs</span>
+          </button>
+          <button 
+            onClick={() => {
+              localStorage.removeItem('token');
+              window.location.href = '/login';
+            }}
+            className="group flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
+          >
+            <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+            <span>Sign Out</span>
           </button>
         </nav>
         
