@@ -1,0 +1,150 @@
+import { useState } from 'react';
+import PageShell from '../components/layout/PageShell';
+import { Search, Plus } from 'lucide-react';
+import StatusBadge from '../components/common/StatusBadge';
+import DetailDrawer from '../components/common/DetailDrawer';
+import { mockAdjustments } from '../data/mockData';
+
+const Adjustments = () => {
+  const [selectedAdj, setSelectedAdj] = useState(null);
+
+  return (
+    <PageShell title="Inventory Adjustments" subtitle="Reconcile recorded inventory with physical counts">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder="Search adjustments..." 
+                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 transition-all"
+              />
+            </div>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95">
+            <Plus className="w-4 h-4" />
+            New Adjustment
+          </button>
+        </div>
+        
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap table-fixed">
+            <colgroup>
+              <col className="w-[15%]" />
+              <col className="w-[20%]" />
+              <col className="w-[15%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+            </colgroup>
+            <thead className="bg-white text-slate-400 font-sans text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 select-none sticky top-0 z-10 shadow-sm">
+              <tr>
+                <th className="py-3 px-6 font-bold">Reference</th>
+                <th className="py-3 px-4 font-bold">Product</th>
+                <th className="py-3 px-4 font-bold">Location</th>
+                <th className="py-3 px-4 font-bold text-right">System</th>
+                <th className="py-3 px-4 font-bold text-right">Physical</th>
+                <th className="py-3 px-4 font-bold text-right">Difference</th>
+                <th className="py-3 px-4 font-bold">Reason</th>
+                <th className="py-3 px-4 font-bold text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 cursor-pointer">
+              {mockAdjustments.map((item, idx) => (
+                <tr 
+                  key={idx} 
+                  onClick={() => setSelectedAdj(item)}
+                  className="hover:bg-slate-50 transition-all duration-200 group relative"
+                >
+                  <td className="py-4 px-6 font-mono text-[11px] text-slate-500 font-semibold group-hover:text-indigo-600 transition-colors">{item.id}</td>
+                  <td className="py-4 px-4 font-semibold text-slate-900 truncate">{item.product}</td>
+                  <td className="py-4 px-4 text-slate-600 truncate">{item.location}</td>
+                  <td className="py-4 px-4 text-right font-mono text-slate-500 tabular-nums">{item.systemQty}</td>
+                  <td className="py-4 px-4 text-right font-mono text-slate-900 font-bold tabular-nums">{item.physicalQty}</td>
+                  <td className={`py-4 px-4 text-right font-mono font-bold tabular-nums ${item.diff < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {item.diff > 0 ? `+${item.diff}` : item.diff}
+                  </td>
+                  <td className="py-4 px-4 text-slate-600 truncate">{item.reason}</td>
+                  <td className="py-4 px-4 text-right"><StatusBadge status={item.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {mockAdjustments.length} adjustments</span>
+            <div className="flex items-center gap-1">
+              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
+              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
+              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <DetailDrawer
+        isOpen={!!selectedAdj}
+        onClose={() => setSelectedAdj(null)}
+        title="Adjustment Details"
+      >
+        {selectedAdj && (
+          <div className="flex flex-col space-y-6">
+            <div className="flex items-start justify-between">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Reference</span>
+                <span className="font-mono text-lg font-bold text-indigo-600 mt-1">{selectedAdj.id}</span>
+              </div>
+              <StatusBadge status={selectedAdj.status} />
+            </div>
+
+            <div className="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Product & Location</span>
+              <span className="font-semibold text-slate-900 mt-1 text-lg">{selectedAdj.product}</span>
+              <span className="font-mono text-sm text-slate-500 mt-1">{selectedAdj.sku} • {selectedAdj.location}</span>
+            </div>
+
+            <div className="flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 text-center">Discrepancy</span>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col items-center">
+                  <span className="text-xs text-slate-500">System</span>
+                  <span className="font-mono text-2xl font-semibold text-slate-400 mt-1">{selectedAdj.systemQty}</span>
+                </div>
+                
+                <div className="flex flex-col items-center mx-4">
+                  <span className={`font-mono text-xl font-bold px-3 py-1 rounded-lg ${selectedAdj.diff < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {selectedAdj.diff > 0 ? `+${selectedAdj.diff}` : selectedAdj.diff}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500 mt-2 uppercase">Difference</span>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <span className="text-xs text-slate-900 font-bold">Physical</span>
+                  <span className="font-mono text-2xl font-bold text-slate-900 mt-1">{selectedAdj.physicalQty}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Reason Code</span>
+              <span className="font-semibold text-slate-900 mt-1">{selectedAdj.reason}</span>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
+              {selectedAdj.status !== 'Completed' && (
+                <button className="w-full py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-slate-800 transition-colors">
+                  Approve Adjustment
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
+    </PageShell>
+  );
+};
+
+export default Adjustments;
