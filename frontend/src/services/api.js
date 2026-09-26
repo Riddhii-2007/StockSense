@@ -98,6 +98,50 @@ export const api = {
     }));
   },
 
+  async getReceipts() {
+    const data = await fetchJSON('/operations?type=receipt');
+    return data.operations.map(op => ({
+      id: op.id.substring(0, 8),
+      supplier: 'System Generated', // Supplier isn't tracked in operations yet
+      items: op.lines?.length || 0,
+      quantity: op.lines?.reduce((sum, line) => sum + line.quantity, 0) || 0,
+      destination: op.dest_location_name || 'Unknown',
+      status: op.status === 'done' ? 'Completed' : (op.status === 'draft' ? 'Draft' : 'Pending'),
+      date: new Date(op.created_at).toLocaleDateString()
+    }));
+  },
+
+  async getDeliveries() {
+    const data = await fetchJSON('/operations?type=delivery');
+    return data.operations.map(op => ({
+      id: op.id.substring(0, 8),
+      customer: 'System Generated', // Customer isn't tracked in operations yet
+      items: op.lines?.length || 0,
+      quantity: op.lines?.reduce((sum, line) => sum + line.quantity, 0) || 0,
+      source: op.source_location_name || 'Unknown',
+      status: op.status === 'done' ? 'Completed' : (op.status === 'draft' ? 'Draft' : 'Pending'),
+      date: new Date(op.created_at).toLocaleDateString()
+    }));
+  },
+
+  async getAdjustments() {
+    const data = await fetchJSON('/operations?type=adjustment');
+    return data.operations.map(op => {
+      const line = op.lines?.[0]; // Assume single line for now
+      return {
+        id: op.id.substring(0, 8),
+        product: line?.product_name || 'Multiple',
+        sku: 'Unknown',
+        location: op.source_location_name || op.dest_location_name || 'Unknown',
+        systemQty: 0, // Need previous state or true ledger reconciliation for this
+        physicalQty: line?.quantity || 0,
+        diff: line?.quantity || 0,
+        reason: 'Manual entry',
+        status: op.status === 'done' ? 'Completed' : 'Pending'
+      };
+    });
+  },
+
   async getLedger() {
     const data = await fetchJSON('/ledger');
     return data.entries.map(r => ({

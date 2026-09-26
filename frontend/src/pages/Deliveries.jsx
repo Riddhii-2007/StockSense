@@ -1,15 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PageShell from '../components/layout/PageShell';
 import { Search, Plus, Check, ArrowRight } from 'lucide-react';
 import StatusBadge from '../components/common/StatusBadge';
 import DetailDrawer from '../components/common/DetailDrawer';
-import { mockDeliveries } from '../data/mockData';
+import { api } from '../services/api';
 
 const tabs = ['All', 'Draft', 'Picking', 'Ready', 'Completed', 'Cancelled'];
 
 const Deliveries = () => {
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [activeTab, setActiveTab] = useState('All');
+  const [deliveries, setDeliveries] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDeliveries() {
+      try {
+        const data = await api.getDeliveries();
+        setDeliveries(data);
+      } catch (e) {
+        console.error('Failed to fetch deliveries:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchDeliveries();
+  }, []);
 
   return (
     <PageShell title="Deliveries" subtitle="Manage outgoing inventory and customer shipments">
@@ -75,7 +91,15 @@ const Deliveries = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 cursor-pointer">
-              {mockDeliveries.map((item, idx) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-500">Loading deliveries...</td>
+                </tr>
+              ) : deliveries.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-500">No deliveries found.</td>
+                </tr>
+              ) : deliveries.map((item, idx) => (
                 <tr 
                   key={idx} 
                   onClick={() => setSelectedDelivery(item)}
@@ -98,7 +122,7 @@ const Deliveries = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {mockDeliveries.length} deliveries</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {deliveries.length} deliveries</span>
             <div className="flex items-center gap-1">
               <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
               <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>

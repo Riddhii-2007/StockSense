@@ -9,24 +9,28 @@ import Adjustments from './pages/Adjustments';
 import InventoryHealthPage from './pages/InventoryHealthPage';
 import Alerts from './pages/Alerts';
 import Settings from './pages/Settings';
+import Login from './pages/Login';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<Login />} />
         
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/ledger" element={<Ledger />} />
-        <Route path="/transfers" element={<Transfers />} />
-        
-        <Route path="/receipts" element={<Receipts />} />
-        <Route path="/deliveries" element={<Deliveries />} />
-        <Route path="/adjustments" element={<Adjustments />} />
-        <Route path="/inventory-health" element={<InventoryHealthPage />} />
-        <Route path="/alerts" element={<Alerts />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/ledger" element={<Ledger />} />
+          <Route path="/transfers" element={<Transfers />} />
+          <Route path="/receipts" element={<Receipts />} />
+          <Route path="/deliveries" element={<Deliveries />} />
+          <Route path="/adjustments" element={<Adjustments />} />
+          <Route path="/inventory-health" element={<InventoryHealthPage />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
       </Routes>
     </Router>
   );
