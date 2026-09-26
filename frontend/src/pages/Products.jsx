@@ -4,25 +4,44 @@ import { Search, Plus, Package } from 'lucide-react';
 import { api } from '../services/api';
 import DetailDrawer from '../components/common/DetailDrawer';
 import StatusBadge from '../components/common/StatusBadge';
+import AddProductModal from '../components/products/AddProductModal';
 
 const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [productsList, setProductsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
+  const [statusFilter, setStatusFilter] = useState('All Stock Status');
+
+  const fetchData = async () => {
+    try {
+      const result = await api.getProducts();
+      setProductsList(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const result = await api.getProducts();
-        setProductsList(result);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const filteredProducts = productsList.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.sku.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'All Categories' || item.category === categoryFilter;
+    const matchesStatus = statusFilter === 'All Stock Status' || (
+       statusFilter === 'Healthy' ? item.status === 'HEALTHY' : 
+       statusFilter === 'Low Stock' ? (item.status === 'LOW' || item.status === 'CRITICAL') : true
+    );
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
   return (
     <PageShell title="Products" subtitle="Manage inventory catalogue and stock thresholds">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
@@ -33,24 +52,36 @@ const Products = () => {
               <input 
                 type="text" 
                 placeholder="Search products or SKUs..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 transition-all"
               />
             </div>
-            <select className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors">
+            <select 
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors"
+            >
               <option>All Categories</option>
-              <option>Raw Materials</option>
+              <option>Raw Material</option>
               <option>Components</option>
+              <option>Consumables</option>
+              <option>Packaging</option>
+              <option>Finished Goods</option>
             </select>
-            <select className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors"
+            >
               <option>All Stock Status</option>
               <option>Healthy</option>
               <option>Low Stock</option>
             </select>
           </div>
           <button 
-            disabled
-            title="Not implemented yet"
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95 opacity-50 cursor-not-allowed"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             Add Product
@@ -80,7 +111,7 @@ const Products = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 cursor-pointer">
-              {productsList.map((item) => (
+              {filteredProducts.map((item) => (
                 <tr 
                   key={item.id} 
                   onClick={() => setSelectedProduct(item)}
@@ -106,7 +137,7 @@ const Products = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {productsList.length} products</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {filteredProducts.length} products</span>
             <div className="flex items-center gap-1">
               <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
               <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
@@ -179,6 +210,14 @@ const Products = () => {
           </div>
         )}
       </DetailDrawer>
+
+      <AddProductModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
     </PageShell>
   );
 };
