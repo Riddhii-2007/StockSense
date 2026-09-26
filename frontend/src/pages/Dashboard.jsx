@@ -14,17 +14,18 @@ const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = async () => {
+    try {
+      const result = await api.getDashboard();
+      setData(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const result = await api.getDashboard();
-        setData(result);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -44,7 +45,7 @@ const Dashboard = () => {
   return (
     <PageShell title="Dashboard" subtitle="Real-time inventory overview and warehouse activity">
       {/* 1. Command Bar Master Card */}
-      <CommandBar />
+      <CommandBar onRefresh={fetchData} />
 
       {/* 2. Operational KPI Overview */}
       <KpiSection kpis={data?.kpis} />

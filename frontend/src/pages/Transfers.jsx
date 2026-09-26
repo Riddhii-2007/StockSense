@@ -1,13 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PageShell from '../components/layout/PageShell';
 import { Search, Plus, ArrowRight, ArrowRightLeft } from 'lucide-react';
-import { recentActivity } from '../data/mockData';
+import { api } from '../services/api';
 import DetailDrawer from '../components/common/DetailDrawer';
 import StatusBadge from '../components/common/StatusBadge';
 
 const Transfers = () => {
   const [selectedTransfer, setSelectedTransfer] = useState(null);
-  const transfers = recentActivity.filter(a => a.operation === 'Internal Transfer');
+  const [transfers, setTransfers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await api.getTransfers();
+        setTransfers(result);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <PageShell title="Internal Transfers" subtitle="Move inventory between locations with full visibility and validation">
@@ -75,9 +90,7 @@ const Transfers = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3 text-xs">
-                      <span className="text-slate-500 font-medium w-24 truncate text-right">Main Store</span>
-                      <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all" />
-                      <span className="text-slate-900 font-semibold w-28 truncate">Production Rack</span>
+                      <span className="text-slate-900 font-semibold truncate">{item.locationFlow}</span>
                     </div>
                   </td>
                   <td className="py-4 px-4">

@@ -1,13 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PageShell from '../components/layout/PageShell';
 import { Search, Plus, Package } from 'lucide-react';
-import { products } from '../data/mockData';
+import { api } from '../services/api';
 import DetailDrawer from '../components/common/DetailDrawer';
 import StatusBadge from '../components/common/StatusBadge';
 
 const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productsList, setProductsList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await api.getProducts();
+        setProductsList(result);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
   return (
     <PageShell title="Products" subtitle="Manage inventory catalogue and stock thresholds">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
@@ -61,7 +76,7 @@ const Products = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 cursor-pointer">
-              {products.map((item) => (
+              {productsList.map((item) => (
                 <tr 
                   key={item.id} 
                   onClick={() => setSelectedProduct(item)}
@@ -87,7 +102,7 @@ const Products = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {products.length} products</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {productsList.length} products</span>
             <div className="flex items-center gap-1">
               <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
               <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>

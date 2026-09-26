@@ -3,9 +3,10 @@ import { Sparkles, Mic, Zap } from 'lucide-react';
 import { api } from '../../services/api';
 import TransactionPreview from './TransactionPreview';
 
-const CommandBar = () => {
+const CommandBar = ({ onRefresh }) => {
   const [command, setCommand] = useState('Move 30 Steel Rods from Main Store to Production Rack');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCommitting, setIsCommitting] = useState(false);
   const [simulationState, setSimulationState] = useState(null);
 
   const handleAnalyze = async () => {
@@ -17,15 +18,30 @@ const CommandBar = () => {
       setSimulationState(result);
     } catch (err) {
       console.error(err);
+      setSimulationState({
+        isValid: false,
+        reason: err.message
+      });
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleConfirm = () => {
-    // Mock committing logic
-    setSimulationState(null);
-    setCommand('');
+  const handleConfirm = async () => {
+    if (!simulationState || !simulationState.isValid || !simulationState.normalizedPayload) return;
+    
+    setIsCommitting(true);
+    try {
+      await api.executeTransfer(simulationState.normalizedPayload);
+      setSimulationState(null);
+      setCommand('');
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to commit transaction: ' + err.message);
+    } finally {
+      setIsCommitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -139,6 +155,7 @@ const CommandBar = () => {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         onModify={handleModify}
+        isCommitting={isCommitting}
       />
     </div>
   );

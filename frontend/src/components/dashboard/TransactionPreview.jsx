@@ -1,6 +1,6 @@
 import { CheckCircle2, AlertOctagon, Info, ArrowRight } from 'lucide-react';
 
-const TransactionPreview = ({ simulationState, onConfirm, onCancel, onModify }) => {
+const TransactionPreview = ({ simulationState, onConfirm, onCancel, onModify, isCommitting }) => {
   if (!simulationState) return null;
 
   const { isValid, intent, product, source, destination, quantity, sourceBefore, sourceAfter, destBefore, destAfter, totalBefore, totalAfter, available, reason } = simulationState;
@@ -145,16 +145,18 @@ const TransactionPreview = ({ simulationState, onConfirm, onCancel, onModify }) 
         <div className="flex items-center gap-3">
           <button 
             onClick={onCancel}
-            className="px-5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm active:scale-95"
+            disabled={isCommitting}
+            className="px-5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm active:scale-95 disabled:opacity-50"
           >
             Cancel
           </button>
           <button 
             onClick={onConfirm}
-            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 text-sm font-semibold shadow-sm transition-all active:scale-95"
+            disabled={isCommitting}
+            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 text-sm font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Confirm & Commit</span>
+            <CheckCircle2 className={`w-4 h-4 ${isCommitting ? 'animate-spin' : ''}`} />
+            <span>{isCommitting ? 'Committing...' : 'Confirm & Commit'}</span>
           </button>
         </div>
       </div>

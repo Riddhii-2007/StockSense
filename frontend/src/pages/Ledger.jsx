@@ -1,12 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PageShell from '../components/layout/PageShell';
 import { Search, Filter, Download, ArrowRight, ArrowRightLeft, Clock, User } from 'lucide-react';
-import { recentActivity } from '../data/mockData';
+import { api } from '../services/api';
 import DetailDrawer from '../components/common/DetailDrawer';
 import StatusBadge from '../components/common/StatusBadge';
 
 const Ledger = () => {
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [ledgerEntries, setLedgerEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await api.getLedger();
+        setLedgerEntries(result);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <PageShell title="Stock Ledger" subtitle="Immutable record of all inventory transactions">
@@ -67,7 +83,7 @@ const Ledger = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 cursor-pointer">
-              {recentActivity.map((item, idx) => (
+              {ledgerEntries.map((item, idx) => (
                 <tr 
                   key={idx} 
                   onClick={() => setSelectedEntry(item)}
@@ -97,15 +113,7 @@ const Ledger = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2 text-xs">
-                      {item.locationFlow.split('→').length > 1 ? (
-                        <>
-                          <span className="text-slate-500 font-medium truncate max-w-[80px] text-right">{item.locationFlow.split('→')[0].trim()}</span>
-                          <ArrowRight className="w-3 h-3 text-slate-300 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                          <span className="text-slate-900 font-semibold truncate max-w-[100px]">{item.locationFlow.split('→')[1].trim()}</span>
-                        </>
-                      ) : (
                         <span className="text-slate-900 font-semibold truncate">{item.locationFlow}</span>
-                      )}
                     </div>
                   </td>
                   <td className="py-4 px-4 text-right">
@@ -116,7 +124,7 @@ const Ledger = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {recentActivity.length} records</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {ledgerEntries.length} records</span>
             <div className="flex items-center gap-1">
               <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
               <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
@@ -153,14 +161,10 @@ const Ledger = () => {
             </div>
 
             <div className="flex flex-col p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Location Flow</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Location</span>
               <div className="flex items-center gap-3">
                 <span className="font-mono text-sm text-slate-900 bg-slate-100 px-3 py-1.5 rounded flex-1 text-center">
-                  {selectedEntry.locationFlow.split('→')[0].trim()}
-                </span>
-                <ArrowRight className="w-5 h-5 text-slate-400" />
-                <span className="font-mono text-sm text-slate-900 bg-slate-100 px-3 py-1.5 rounded flex-1 text-center">
-                  {selectedEntry.locationFlow.split('→')[1]?.trim() || 'External'}
+                  {selectedEntry.locationFlow}
                 </span>
               </div>
             </div>

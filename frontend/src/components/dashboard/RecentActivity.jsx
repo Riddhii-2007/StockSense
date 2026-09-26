@@ -8,7 +8,6 @@ const RecentActivity = ({ activities }) => {
   };
 
   const formatQuantity = (qty, operation) => {
-    if (operation === 'Internal Transfer') return '-30 / +30';
     return qty > 0 ? `+${qty}` : qty;
   };
 
