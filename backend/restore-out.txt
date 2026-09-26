@@ -1,0 +1,2 @@
+◇ injected env (8) from .env
+current state: ledger=1 operations=2 main_store=110 production_rack=30

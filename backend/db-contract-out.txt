@@ -1,0 +1,147 @@
+
+0. Connection
+  host=aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+  database=postgres  user=postgres  DB_DRIVER=postgres
+
+1. Tables in schema public
+  locations, operation_items, operations, products, stock_by_location, stock_ledger, users
+  PASS  table exists: products
+  PASS  table exists: locations
+  PASS  table exists: stock_by_location
+  PASS  table exists: stock_ledger
+
+2. Columns of the four core tables
+  products:
+    id                   uuid         null=NO
+    name                 text         null=NO
+    sku                  text         null=NO
+    category             text         null=YES
+    unit_of_measure      text         null=YES
+    current_stock        numeric      null=NO
+    min_stock            numeric      null=YES
+    created_at           timestamp with time zone null=YES
+    unit_cost            numeric      null=NO
+    active               boolean      null=NO
+  locations:
+    id                   uuid         null=NO
+    name                 text         null=NO
+    type                 text         null=NO
+  stock_by_location:
+    product_id           uuid         null=NO
+    location_id          uuid         null=NO
+    quantity             numeric      null=NO
+    reserved             numeric      null=NO
+    updated_at           timestamp with time zone null=NO
+  stock_ledger:
+    id                   uuid         null=NO
+    product_id           uuid         null=YES
+    operation_type       text         null=NO
+    quantity             numeric      null=NO
+    from_stock_before    numeric      null=YES
+    from_stock_after     numeric      null=YES
+    to_stock_before      numeric      null=YES
+    to_stock_after       numeric      null=YES
+    from_location_id     uuid         null=YES
+    to_location_id       uuid         null=YES
+    reference            text         null=YES
+    created_at           timestamp with time zone null=YES
+    operation_id         uuid         null=YES
+    operation_item_id    uuid         null=YES
+    location_id          uuid         null=YES
+    quantity_change      numeric      null=NO
+    stock_before         numeric      null=NO
+    stock_after          numeric      null=NO
+    created_by           text         null=NO
+    seq                  bigint       null=YES
+
+3. locations rows
+    Main Store
+    Production Rack
+  PASS  location exists: 'Main Store'
+  PASS  location exists: 'Production Rack'
+
+4. products row with sku = STL-001
+    name=Steel Rods  sku=STL-001  category=Raw Material  uom=kg  current_stock=140  min_stock=20
+  PASS  product with sku STL-001 exists
+  PASS  STL-001 current_stock = 140
+  PASS  STL-001 min_stock = 20
+
+5. stock_by_location for STL-001 vs products.current_stock
+    Main Store: 110
+    Production Rack: 30
+  FAIL  Main Store quantity = 120 :: got 110
+  FAIL  Production Rack quantity = 20 :: got 30
+  PASS  current_stock equals SUM(stock_by_location.quantity)
+
+6. stock_ledger
+    rows = 1
+  PASS  stock_ledger reachable (count query ran)
+
+7. Row counts
+    locations            2
+    operation_items      0
+    operations           2
+    products             1
+    stock_by_location    2
+    stock_ledger         1
+    users                0
+
+8. Foreign keys (stock_by_location, stock_ledger)
+    stock_by_location.location_id -> locations.id  (stock_by_location_location_id_fkey)
+    stock_by_location.product_id -> products.id  (stock_by_location_product_id_fkey)
+    stock_ledger.from_location_id -> locations.id  (stock_ledger_from_location_id_fkey)
+    stock_ledger.location_id -> locations.id  (stock_ledger_location_id_fkey)
+    stock_ledger.operation_id -> operations.id  (stock_ledger_operation_id_fkey)
+    stock_ledger.operation_item_id -> operation_items.id  (stock_ledger_operation_item_fk)
+    stock_ledger.product_id -> products.id  (stock_ledger_product_id_fkey)
+    stock_ledger.to_location_id -> locations.id  (stock_ledger_to_location_id_fkey)
+  PASS  stock_by_location.product_id  -> products.id
+  PASS  stock_by_location.location_id -> locations.id
+  PASS  stock_ledger.product_id       -> products.id
+  PASS  stock_ledger.from_location_id -> locations.id
+  PASS  stock_ledger.to_location_id   -> locations.id
+
+9. CHECK constraints on the core tables
+    products :: products_current_stock_check :: CHECK ((current_stock >= (0)::numeric))
+    stock_by_location :: sbl_stock_guards :: CHECK (((quantity >= (0)::numeric) AND (reserved >= (0)::numeric) AND (reserved <= quantity)))
+    stock_by_location :: stock_by_location_quantity_check :: CHECK ((quantity >= (0)::numeric))
+  PASS  a quantity >= 0 CHECK exists on stock_by_location
+
+10. Triggers on the core tables
+    stock_by_location :: sync_stock_on_delete
+    stock_by_location :: sync_stock_on_insert
+    stock_by_location :: sync_stock_on_update
+    stock_ledger :: ledger_no_delete
+    stock_ledger :: ledger_no_update
+
+11. Functions/RPCs in schema public
+    execute_transfer(p_product_id uuid, p_from_location_id uuid, p_to_location_id uuid, p_quantity numeric, p_stock_before numeric, p_stock_after numeric, p_reference text) RETURNS uuid
+    execute_transfer(p_operation_id uuid) RETURNS uuid
+    forbid_ledger_mutation() RETURNS trigger
+    forbid_posted_item_mutation() RETURNS trigger
+    sync_product_current_stock() RETURNS trigger
+
+12. Row level security state
+    locations            rls=false
+    operation_items      rls=false
+    operations           rls=false
+    products             rls=false
+    stock_by_location    rls=false
+    stock_ledger         rls=false
+    users                rls=false
+
+13. Negative stock must be rejected (rolled-back attempt)
+    rejected: new row for relation "stock_by_location" violates check constraint "sbl_stock_guards"
+  PASS  negative quantity rejected by CHECK constraint
+
+14. Unknown product_id must be rejected (rolled-back attempt)
+    rejected: insert or update on table "stock_by_location" violates foreign key constraint "stock_by_location_product_id_fkey"
+  PASS  unknown product_id rejected by foreign key
+
+15. stock_ledger contents (read-only)
+    type=transfer qty=10 qchg=-10 before=120 after=110 from=d1d9ed20-7277-46dd-bf49-72aefe4b4564 to=3e524688-556a-4bfe-9e5f-da6e6c5b1709 f:120→110 t:20→30 ref=manual transfer op=- seq=1
+    seq column owned_by_sequence: (none - plain bigint)
+
+==============================================
+  19 passed, 2 failed
+==============================================
