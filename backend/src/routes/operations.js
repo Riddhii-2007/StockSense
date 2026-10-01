@@ -1,5 +1,6 @@
 import express from 'express';
 import { validateOperation, resolveEntities, OPERATION_TYPES, STATUSES } from '../services/validation.js';
+import { requireRole } from '../middleware/rbac.js';
 import {
   createOperation,
   getOperation,
@@ -73,8 +74,12 @@ router.get('/:id', async (req, res) => {
  * stock only moves on POST /:id/post.
  */
 router.post('/', async (req, res) => {
-  const op = await createOperation(req.body, req.body.createdBy ?? 'demo');
-  const ready = req.body.autoReady === false ? op : await setStatus(op.id, 'ready', req.body.createdBy ?? 'demo');
+  if (req.body.type === 'adjustment' && req.user?.role === 'STAFF') {
+    return res.status(403).json({ success: false, message: 'Staff cannot perform adjustments' });
+  }
+  const createdBy = req.user?.email || 'demo';
+  const op = await createOperation(req.body, createdBy);
+  const ready = req.body.autoReady === false ? op : await setStatus(op.id, 'ready', createdBy);
   res.status(201).json({
     success: true,
     message: `Operation #${ready.id} created as ${ready.status}. No stock moved yet.`,
@@ -86,11 +91,15 @@ router.post('/', async (req, res) => {
 router.post('/:id/post', async (req, res) => {
   const id = operationId(req, res);
   if (id === null) return undefined;
-  const op = await postOperation(id, req.body?.createdBy ?? 'demo');
+  const op = await getOperation(id);
+  if (op.type === 'adjustment' && req.user?.role === 'STAFF') {
+    return res.status(403).json({ success: false, message: 'Staff cannot post adjustments' });
+  }
+  const posted = await postOperation(id, req.user?.email || 'demo');
   return res.json({
     success: true,
-    message: `Operation #${op.id} posted. Stock and ledger updated.`,
-    operation: op,
+    message: `Operation #${posted.id} posted. Stock and ledger updated.`,
+    operation: posted,
   });
 });
 
@@ -103,17 +112,21 @@ router.post('/:id/status', async (req, res) => {
     return res.status(400).json({ success: false, message: `status must be one of ${STATUSES.join(', ')}` });
   }
   if (next === 'done') {
-    const op = await postOperation(id, req.body?.createdBy ?? 'demo');
-    return res.json({ success: true, message: `Operation #${op.id} posted.`, operation: op });
+    const op = await getOperation(id);
+    if (op.type === 'adjustment' && req.user?.role === 'STAFF') {
+      return res.status(403).json({ success: false, message: 'Staff cannot post adjustments' });
+    }
+    const posted = await postOperation(id, req.user?.email || 'demo');
+    return res.json({ success: true, message: `Operation #${posted.id} posted.`, operation: posted });
   }
   if (next === 'canceled') {
     return res.json({
       success: true,
       message: `Operation #${id} canceled.`,
-      operation: await cancelOperation(id, req.body?.reason ?? null, req.body?.createdBy ?? 'demo'),
+      operation: await cancelOperation(id, req.body?.reason ?? null, req.user?.email || 'demo'),
     });
   }
-  return res.json({ success: true, operation: await setStatus(id, next, req.body?.createdBy ?? 'demo') });
+  return res.json({ success: true, operation: await setStatus(id, next, req.user?.email || 'demo') });
 });
 
 /** POST /api/operations/:id/cancel */

@@ -195,7 +195,7 @@ export async function validateOperation(input = {}) {
       }
     }
 
-    if (destId && type !== 'ADJUSTMENT') {
+    if (destId && type !== 'adjustment') {
       const before = await readInventory(product.id, destId);
       impactsForLine.push({
         locationId: destId,

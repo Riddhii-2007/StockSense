@@ -48,6 +48,8 @@ const Login = () => {
       // Store auth info
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('userName', data.user.fullName || data.user.name);
+      localStorage.setItem('userRole', data.user.role);
       
       // Redirect to dashboard
       navigate('/dashboard');

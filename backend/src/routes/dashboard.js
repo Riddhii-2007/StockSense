@@ -28,6 +28,10 @@ router.get('/', async (req, res) => {
   const byType = await db
     .prepare('SELECT operation_type AS type, COUNT(*) AS n FROM operations GROUP BY operation_type')
     .all();
+  const pendingByType = await db
+    .prepare("SELECT operation_type AS type, COUNT(*) AS n FROM operations WHERE status IN ('draft','waiting','ready') GROUP BY operation_type")
+    .all();
+
 
   const recent = await db
     .prepare(
@@ -68,10 +72,12 @@ router.get('/', async (req, res) => {
     stats,
     byStatus,
     byType,
+    pendingByType,
     lowStock,
     recent,
     integrity: { ok: integrity.ok, checkedAt: integrity.checkedAt, ledgerEntries: integrity.ledgerEntries },
   });
+
 });
 
 export default router;

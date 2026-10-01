@@ -1,28 +1,72 @@
 import { useState, useEffect } from 'react';
 import PageShell from '../components/layout/PageShell';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Loader2, MapPin, Package, Calendar } from 'lucide-react';
 import StatusBadge from '../components/common/StatusBadge';
 import DetailDrawer from '../components/common/DetailDrawer';
+import AddAdjustmentModal from '../components/adjustments/AddAdjustmentModal';
 import { api } from '../services/api';
+import toast from 'react-hot-toast';
 
 const Adjustments = () => {
   const [selectedAdj, setSelectedAdj] = useState(null);
   const [adjustments, setAdjustments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const fetchAdjustments = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api.getAdjustments();
+      setAdjustments(data);
+    } catch (e) {
+      console.error('Failed to fetch adjustments:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchAdjustments() {
-      try {
-        const data = await api.getAdjustments();
-        setAdjustments(data);
-      } catch (e) {
-        console.error('Failed to fetch adjustments:', e);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchAdjustments();
   }, []);
+
+  const filteredAdjustments = adjustments.filter(item => {
+    const query = searchTerm.toLowerCase();
+    return (
+      item.id.toLowerCase().includes(query) ||
+      (item.fullId && item.fullId.toLowerCase().includes(query)) ||
+      item.product.toLowerCase().includes(query) ||
+      item.location.toLowerCase().includes(query) ||
+      item.reason.toLowerCase().includes(query)
+    );
+  });
+
+  const handlePostAdjustment = async (fullId) => {
+    if (!fullId) return;
+    try {
+      setIsActionLoading(true);
+      await api.postOperation(fullId);
+      await fetchAdjustments();
+      setSelectedAdj(null);
+      toast.success('Adjustment posted successfully');
+    } catch (err) {
+      console.error('Failed to post adjustment:', err);
+      toast.error('Failed to approve adjustment: ' + err.message);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAdjustments.length / itemsPerPage));
+  const paginatedAdjustments = filteredAdjustments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <PageShell title="Inventory Adjustments" subtitle="Reconcile recorded inventory with physical counts">
@@ -34,11 +78,16 @@ const Adjustments = () => {
               <input 
                 type="text" 
                 placeholder="Search adjustments..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 transition-all"
               />
             </div>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95">
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95"
+          >
             <Plus className="w-4 h-4" />
             New Adjustment
           </button>
@@ -73,17 +122,19 @@ const Adjustments = () => {
                 <tr>
                   <td colSpan="8" className="py-8 text-center text-slate-500">Loading adjustments...</td>
                 </tr>
-              ) : adjustments.length === 0 ? (
+              ) : paginatedAdjustments.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-8 text-center text-slate-500">No adjustments found.</td>
+                  <td colSpan="8" className="py-8 text-center text-slate-500">No adjustments found matching criteria.</td>
                 </tr>
-              ) : adjustments.map((item, idx) => (
+              ) : paginatedAdjustments.map((item, idx) => (
                 <tr 
-                  key={idx} 
+                  key={item.fullId || idx} 
                   onClick={() => setSelectedAdj(item)}
                   className="hover:bg-slate-50 transition-all duration-200 group relative"
                 >
-                  <td className="py-4 px-6 font-mono text-[11px] text-slate-500 font-semibold group-hover:text-indigo-600 transition-colors">{item.id}</td>
+                  <td className="py-4 px-6 font-mono text-[11px] text-slate-500 font-semibold group-hover:text-indigo-600 transition-colors">
+                    {item.id}
+                  </td>
                   <td className="py-4 px-4 font-semibold text-slate-900 truncate">{item.product}</td>
                   <td className="py-4 px-4 text-slate-600 truncate">{item.location}</td>
                   <td className="py-4 px-4 text-right font-mono text-slate-500 tabular-nums">{item.systemQty}</td>
@@ -98,11 +149,27 @@ const Adjustments = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {adjustments.length} adjustments</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              Showing {paginatedAdjustments.length} of {filteredAdjustments.length} adjustments
+            </span>
             <div className="flex items-center gap-1">
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
-              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Next</button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">
+                {currentPage}
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
@@ -119,14 +186,21 @@ const Adjustments = () => {
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Reference</span>
                 <span className="font-mono text-lg font-bold text-indigo-600 mt-1">{selectedAdj.id}</span>
+                <span className="font-mono text-[11px] text-slate-400">{selectedAdj.fullId}</span>
               </div>
               <StatusBadge status={selectedAdj.status} />
             </div>
 
             <div className="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-100">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Product & Location</span>
-              <span className="font-semibold text-slate-900 mt-1 text-lg">{selectedAdj.product}</span>
-              <span className="font-mono text-sm text-slate-500 mt-1">{selectedAdj.sku} • {selectedAdj.location}</span>
+              <span className="font-semibold text-slate-900 mt-1 text-lg flex items-center gap-1.5">
+                <Package className="w-5 h-5 text-indigo-500" />
+                {selectedAdj.product}
+              </span>
+              <span className="font-mono text-sm text-slate-500 mt-1 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                {selectedAdj.sku} • {selectedAdj.location}
+              </span>
             </div>
 
             <div className="flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -158,15 +232,25 @@ const Adjustments = () => {
             </div>
 
             <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
-              {selectedAdj.status !== 'Completed' && (
-                <button className="w-full py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-slate-800 transition-colors">
-                  Approve Adjustment
+              {selectedAdj.status !== 'Done' && selectedAdj.status !== 'Completed' && (
+                <button 
+                  onClick={() => handlePostAdjustment(selectedAdj.fullId)}
+                  disabled={isActionLoading}
+                  className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Approve & Apply Adjustment'}
                 </button>
               )}
             </div>
           </div>
         )}
       </DetailDrawer>
+
+      <AddAdjustmentModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={fetchAdjustments}
+      />
     </PageShell>
   );
 };

@@ -1,6 +1,8 @@
 import { AlertOctagon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AttentionRequired = ({ items }) => {
+  const navigate = useNavigate();
   if (!items) return null;
 
   const getBadgeStyle = (severity) => {
@@ -47,9 +49,8 @@ const AttentionRequired = ({ items }) => {
               </div>
             </div>
             <button 
-              disabled
-              title="Not implemented yet"
-              className={`self-end sm:self-center px-4 py-2 rounded-md text-sm font-semibold shadow-sm transition-colors whitespace-nowrap opacity-50 cursor-not-allowed ${getButtonStyle(item.severity)}`}
+              onClick={() => navigate('/receipts')}
+              className={`self-end sm:self-center px-4 py-2 rounded-md text-sm font-semibold shadow-sm transition-colors whitespace-nowrap active:scale-95 ${getButtonStyle(item.severity)}`}
             >
               {item.action}
             </button>

@@ -27,3 +27,4 @@ backend/data/
 # Development scratch scripts and captured test output
 backend/*.tmp.mjs
 backend/verify-out.txt
+scratch/

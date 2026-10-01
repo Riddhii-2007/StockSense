@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import PageShell from '../components/layout/PageShell';
-import { Search, Plus, ArrowRight, ArrowRightLeft } from 'lucide-react';
+import { Search, Plus, ArrowRight, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
 import DetailDrawer from '../components/common/DetailDrawer';
 import StatusBadge from '../components/common/StatusBadge';
@@ -24,6 +24,26 @@ const Transfers = () => {
     fetchData();
   }, []);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const filteredTransfers = transfers.filter(item => {
+    const query = searchTerm.toLowerCase();
+    const matchesSearch = item.id.toLowerCase().includes(query) || 
+                          (item.product && item.product.toLowerCase().includes(query));
+    const matchesStatus = statusFilter === 'All Status' || item.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransfers.length / itemsPerPage));
+  const paginatedTransfers = filteredTransfers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <PageShell title="Internal Transfers" subtitle="Move inventory between locations with full visibility and validation">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
@@ -34,13 +54,22 @@ const Transfers = () => {
               <input 
                 type="text" 
                 placeholder="Search transfers..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 transition-all"
               />
             </div>
-            <select className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors"
+            >
               <option>All Status</option>
               <option>Pending</option>
               <option>Completed</option>
+              <option>Draft</option>
+              <option>Ready</option>
+              <option>Done</option>
             </select>
           </div>
           <button 
@@ -74,7 +103,18 @@ const Transfers = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 cursor-pointer">
-              {transfers.map((item, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-slate-500">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-indigo-500 mb-2" />
+                    Loading transfers...
+                  </td>
+                </tr>
+              ) : paginatedTransfers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-slate-500">No transfers found.</td>
+                </tr>
+              ) : paginatedTransfers.map((item, idx) => (
                 <tr 
                   key={idx} 
                   onClick={() => setSelectedTransfer(item)}
@@ -112,11 +152,27 @@ const Transfers = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {transfers.length} records</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              Showing {paginatedTransfers.length} of {filteredTransfers.length} records
+            </span>
             <div className="flex items-center gap-1">
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
-              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Next</button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">
+                {currentPage}
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
@@ -140,10 +196,10 @@ const Transfers = () => {
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-slate-900">{selectedTransfer.product}</span>
-                <span className="font-mono text-xs text-slate-500">STL-001</span>
+                <span className="font-mono text-xs text-slate-500">{selectedTransfer.sku}</span>
               </div>
               <div className="ml-auto font-mono text-xl font-bold text-slate-900 tabular-nums">
-                {Math.abs(selectedTransfer.quantity)} kg
+                {Math.abs(selectedTransfer.quantity)} units
               </div>
             </div>
 
@@ -153,12 +209,10 @@ const Transfers = () => {
               <div className="w-full flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative z-10 mb-4 group">
                 <div className="flex flex-col">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Source</span>
-                  <span className="text-sm font-bold text-slate-900 mt-1">Main Store</span>
+                  <span className="text-sm font-bold text-slate-900 mt-1">{selectedTransfer.sourceLocation}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-slate-400 line-through">120</span>
-                  <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="font-mono text-lg font-bold text-slate-900">90</span>
+                  <span className="font-mono text-lg font-bold text-red-600">-{Math.abs(selectedTransfer.quantity)}</span>
                 </div>
               </div>
 
@@ -169,12 +223,10 @@ const Transfers = () => {
               <div className="w-full flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative z-10 group">
                 <div className="flex flex-col">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Destination</span>
-                  <span className="text-sm font-bold text-slate-900 mt-1">Production Rack</span>
+                  <span className="text-sm font-bold text-slate-900 mt-1">{selectedTransfer.destLocation}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-slate-400 line-through">20</span>
-                  <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="font-mono text-lg font-bold text-slate-900">50</span>
+                  <span className="font-mono text-lg font-bold text-emerald-600">+{Math.abs(selectedTransfer.quantity)}</span>
                 </div>
               </div>
             </div>
@@ -185,17 +237,23 @@ const Transfers = () => {
                 <span className="font-mono text-[10px] text-emerald-600 font-bold bg-emerald-100 px-2 py-0.5 rounded">Verified</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-slate-500">140</span>
-                <ArrowRight className="w-4 h-4 text-slate-300" />
-                <span className="font-mono text-lg font-bold text-slate-900">140</span>
+                <span className="font-mono text-sm text-slate-500">Internal transfers maintain zero net change</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
               <button 
-                disabled
-                title="Not implemented yet"
-                className="w-full py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors opacity-50 cursor-not-allowed"
+                onClick={() => {
+                  const receiptText = `STOCKSENSE TRANSFER RECEIPT\nReference: ${selectedTransfer.id}\nDate: ${selectedTransfer.date} ${selectedTransfer.time}\n\nProduct: ${selectedTransfer.product}\nQuantity: ${selectedTransfer.quantity}\n\nSource: ${selectedTransfer.source}\nDestination: ${selectedTransfer.destination}\n\nStatus: ${selectedTransfer.status}\nOperator: ${selectedTransfer.operator}`;
+                  const blob = new Blob([receiptText], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `Receipt-${selectedTransfer.id}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="w-full py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm active:scale-95"
               >
                 Download Receipt
               </button>

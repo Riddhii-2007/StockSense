@@ -134,10 +134,18 @@ export async function listOperations({ status, type } = {}) {
   return db
     .prepare(
       `SELECT o.*,
-              (SELECT COUNT(*) FROM operation_items oi WHERE oi.operation_id = o.id) AS line_count,
-              (SELECT COALESCE(SUM(quantity), 0) FROM operation_items oi WHERE oi.operation_id = o.id) AS total_qty
-         FROM operations o ${clause}
-        ORDER BY o.id DESC`
+              fl.name AS source_location_name,
+              tl.name AS dest_location_name,
+              COALESCE(p.name, (SELECT p2.name FROM operation_items oi2 JOIN products p2 ON p2.id = oi2.product_id WHERE oi2.operation_id = o.id LIMIT 1), 'Multiple Items') AS product_name,
+              COALESCE(p.sku, (SELECT p2.sku FROM operation_items oi2 JOIN products p2 ON p2.id = oi2.product_id WHERE oi2.operation_id = o.id LIMIT 1), 'MULTI') AS product_sku,
+              COALESCE(NULLIF((SELECT COUNT(*) FROM operation_items oi WHERE oi.operation_id = o.id), 0), CASE WHEN o.product_id IS NOT NULL OR o.quantity > 0 THEN 1 ELSE 0 END) AS line_count,
+              COALESCE(NULLIF((SELECT SUM(quantity) FROM operation_items oi WHERE oi.operation_id = o.id), 0), o.quantity, 0) AS total_qty
+         FROM operations o
+         LEFT JOIN locations fl ON fl.id = o.from_location_id
+         LEFT JOIN locations tl ON tl.id = o.to_location_id
+         LEFT JOIN products p ON p.id = o.product_id
+         ${clause}
+        ORDER BY o.created_at DESC, o.id DESC`
     )
     .all(...params);
 }

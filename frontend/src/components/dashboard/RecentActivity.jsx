@@ -21,9 +21,21 @@ const RecentActivity = ({ activities }) => {
           <p className="text-sm text-slate-500 mt-0.5">Real-time ledger entries confirmed by operators</p>
         </div>
         <button 
-          disabled
-          title="Not implemented yet"
-          className="px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-colors opacity-50 cursor-not-allowed"
+          onClick={() => {
+            const headers = ['Time', 'Operation', 'Product', 'Quantity', 'LocationFlow', 'Status', 'Ref'];
+            const rows = activities.map(a => [
+              a.time, a.operation, a.product, a.quantity, a.locationFlow, a.status, a.id
+            ]);
+            const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stocksense-recent-activity-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm active:scale-95"
         >
           Export CSV
         </button>

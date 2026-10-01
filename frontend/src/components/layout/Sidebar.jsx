@@ -1,4 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { api } from '../../services/api';
 import { 
   LayoutDashboard, 
   Package, 
@@ -24,13 +26,24 @@ const mainNav = [
   { name: 'Stock Ledger', path: '/ledger', icon: ReceiptText },
 ];
 
-const insightsNav = [
-  { name: 'Inventory Health', path: '/inventory-health', icon: Activity },
-  { name: 'Alerts', path: '/alerts', icon: AlertTriangle, badge: '3' },
-];
+
 
 const Sidebar = () => {
   const location = useLocation();
+  const [alertCount, setAlertCount] = useState(0);
+  const [userName, setUserName] = useState('Admin User');
+  const [userRole, setUserRole] = useState('Administrator');
+
+  useEffect(() => {
+    api.getAlerts().then(alerts => setAlertCount(alerts.filter(a => !a.resolved).length)).catch(console.error);
+    setUserName(localStorage.getItem('userName') || 'Admin User');
+    setUserRole(localStorage.getItem('userRole') || 'Administrator');
+  }, []);
+
+  const insightsNav = [
+    { name: 'Inventory Health', path: '/inventory-health', icon: Activity },
+    { name: 'Alerts', path: '/alerts', icon: AlertTriangle, badge: alertCount > 0 ? alertCount.toString() : null },
+  ];
 
   const isActive = (path) => {
     if (path === '/dashboard' && location.pathname === '/') return true;
@@ -102,11 +115,11 @@ const Sidebar = () => {
 
       <div className="border-t border-slate-200 p-4 flex-shrink-0 bg-white">
         <nav className="space-y-1 mb-4">
-          <Link to="/settings" className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200">
-            <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
+          <Link to="/settings" className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/settings') ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/10' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+            <Settings className={`w-4 h-4 transition-transform duration-200 ${isActive('/settings') ? 'scale-110' : 'group-hover:scale-110'}`} />
             <span>Settings</span>
           </Link>
-          <button className="group flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200">
+          <button onClick={() => alert('Documentation is available at the project repository.')} className="group flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200">
             <HelpCircle className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
             <span>Help & Docs</span>
           </button>
@@ -130,8 +143,8 @@ const Sidebar = () => {
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-slate-900 truncate">Marcus Vance</div>
-            <div className="text-xs text-slate-500 truncate">Ops Director</div>
+            <div className="text-sm font-semibold text-slate-900 truncate">{userName}</div>
+            <div className="text-xs text-slate-500 truncate">{userRole}</div>
           </div>
           <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 uppercase font-bold tracking-wider">Live</span>
         </div>

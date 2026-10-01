@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageShell from '../components/layout/PageShell';
-import { Search, Plus, Package } from 'lucide-react';
+import { Search, Plus, Package, Loader2, BookOpen } from 'lucide-react';
 import { api } from '../services/api';
 import DetailDrawer from '../components/common/DetailDrawer';
 import StatusBadge from '../components/common/StatusBadge';
 import AddProductModal from '../components/products/AddProductModal';
 
 const Products = () => {
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [drawerLocations, setDrawerLocations] = useState(null);
+  const [drawerLocationsLoading, setDrawerLocationsLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [productsList, setProductsList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,10 +20,15 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [statusFilter, setStatusFilter] = useState('All Stock Status');
 
+  // Track unique categories from live data
+  const [categories, setCategories] = useState([]);
+
   const fetchData = async () => {
     try {
       const result = await api.getProducts();
       setProductsList(result);
+      const cats = [...new Set(result.map(p => p.category).filter(Boolean))].sort();
+      setCategories(cats);
     } catch (err) {
       console.error(err);
     } finally {
@@ -31,45 +40,68 @@ const Products = () => {
     fetchData();
   }, []);
 
+  // BUG-001 fix: load per-location breakdown when drawer opens
+  const openDrawer = async (product) => {
+    setSelectedProduct(product);
+    setDrawerLocations(null);
+    setDrawerLocationsLoading(true);
+    try {
+      const locs = await api.getProductLocations(product.id);
+      setDrawerLocations(locs);
+    } catch (err) {
+      console.error('Failed to load product locations', err);
+      setDrawerLocations({});
+    } finally {
+      setDrawerLocationsLoading(false);
+    }
+  };
+
   const filteredProducts = productsList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.sku.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'All Categories' || item.category === categoryFilter;
-    const matchesStatus = statusFilter === 'All Stock Status' || (
-       statusFilter === 'Healthy' ? item.status === 'HEALTHY' : 
-       statusFilter === 'Low Stock' ? (item.status === 'LOW' || item.status === 'CRITICAL') : true
-    );
+    const matchesStatus = statusFilter === 'All Stock Status' ||
+      (statusFilter === 'Healthy' ? item.status === 'Healthy' :
+       statusFilter === 'Low Stock' ? item.status === 'Low Stock' :
+       statusFilter === 'Critical' ? item.status === 'Critical' :
+       statusFilter === 'Out of Stock' ? item.status === 'Out of Stock' : true);
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <PageShell title="Products" subtitle="Manage inventory catalogue and stock thresholds">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
         <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
-                placeholder="Search products or SKUs..." 
+              <input
+                type="text"
+                placeholder="Search products or SKUs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 transition-all"
               />
             </div>
-            <select 
+            <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors"
             >
               <option>All Categories</option>
-              <option>Raw Material</option>
-              <option>Components</option>
-              <option>Consumables</option>
-              <option>Packaging</option>
-              <option>Finished Goods</option>
+              {categories.map(c => <option key={c}>{c}</option>)}
             </select>
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none hover:bg-slate-50 transition-colors"
@@ -77,9 +109,11 @@ const Products = () => {
               <option>All Stock Status</option>
               <option>Healthy</option>
               <option>Low Stock</option>
+              <option>Critical</option>
+              <option>Out of Stock</option>
             </select>
           </div>
-          <button 
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all active:scale-95"
           >
@@ -87,7 +121,7 @@ const Products = () => {
             Add Product
           </button>
         </div>
-        
+
         <div className="w-full overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap table-fixed">
             <colgroup>
@@ -111,17 +145,29 @@ const Products = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 cursor-pointer">
-              {filteredProducts.map((item) => (
-                <tr 
-                  key={item.id} 
-                  onClick={() => setSelectedProduct(item)}
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-500">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-indigo-500 mb-2" />
+                    Loading products...
+                  </td>
+                </tr>
+              ) : paginatedProducts.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-500">No products found.</td>
+                </tr>
+              ) : paginatedProducts.map((item) => (
+                <tr
+                  key={item.id}
+                  onClick={() => openDrawer(item)}
                   className="hover:bg-slate-50 transition-all duration-200 group relative"
                 >
                   <td className="py-4 px-6 font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{item.name}</td>
                   <td className="py-4 px-4 font-mono text-[11px] text-slate-500">{item.sku}</td>
                   <td className="py-4 px-4 text-slate-700">{item.category}</td>
-                  <td className="py-4 px-4 text-slate-500 text-xs truncate">
-                    {Object.keys(item.locations).join(', ')}
+                  <td className="py-4 px-4 text-slate-400 text-xs truncate font-mono">
+                    {/* Location data is loaded lazily in the drawer */}
+                    —
                   </td>
                   <td className="py-4 px-4 text-right font-mono font-bold text-slate-900 tabular-nums">
                     {item.stock}
@@ -137,11 +183,27 @@ const Products = () => {
             </tbody>
           </table>
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {filteredProducts.length} products</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              Showing {paginatedProducts.length} of {filteredProducts.length} products
+            </span>
             <div className="flex items-center gap-1">
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
-              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Next</button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">
+                {currentPage}
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
@@ -149,7 +211,7 @@ const Products = () => {
 
       <DetailDrawer
         isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        onClose={() => { setSelectedProduct(null); setDrawerLocations(null); }}
         title="Product Details"
       >
         {selectedProduct && (
@@ -179,41 +241,42 @@ const Products = () => {
               </div>
             </div>
 
+            {/* BUG-001 fix: real per-location breakdown */}
             <div className="flex flex-col">
-              <h4 className="text-sm font-bold text-slate-900 mb-3">Locations</h4>
-              <div className="flex flex-col space-y-2">
-                {Object.entries(selectedProduct.locations).map(([loc, qty]) => (
-                  <div key={loc} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <span className="text-sm font-medium text-slate-700">{loc}</span>
-                    <span className="font-mono font-bold text-slate-900 tabular-nums">{qty}</span>
-                  </div>
-                ))}
-              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-3">Stock by Location</h4>
+              {drawerLocationsLoading ? (
+                <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading locations...
+                </div>
+              ) : (
+                <div className="flex flex-col space-y-2">
+                  {drawerLocations && Object.entries(drawerLocations).map(([loc, qty]) => (
+                    <div key={loc} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <span className="text-sm font-medium text-slate-700">{loc}</span>
+                      <span className={`font-mono font-bold tabular-nums text-sm ${qty === 0 ? 'text-slate-400' : 'text-slate-900'}`}>{qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
-              <button 
-                disabled
-                title="Not implemented yet"
-                className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-colors opacity-50 cursor-not-allowed"
+              {/* View Stock History: navigates to the Ledger page */}
+              <button
+                onClick={() => navigate('/ledger')}
+                className="w-full py-2.5 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors"
               >
-                Edit Product
-              </button>
-              <button 
-                disabled
-                title="Not implemented yet"
-                className="w-full py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors opacity-50 cursor-not-allowed"
-              >
-                View Stock History
+                <BookOpen className="w-4 h-4" />
+                View Stock History in Ledger
               </button>
             </div>
           </div>
         )}
       </DetailDrawer>
 
-      <AddProductModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
+      <AddProductModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
           fetchData();
         }}

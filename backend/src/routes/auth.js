@@ -1,6 +1,6 @@
 import express from 'express';
 import { db } from '../db/index.js';
-import { hashPassword, verifyPassword, newOtp, opaqueToken } from '../utils/password.js';
+import { hashPassword, verifyPassword, newOtp, generateToken } from '../utils/password.js';
 
 const router = express.Router();
 
@@ -38,7 +38,7 @@ router.post('/login', async (req, res) => {
   if (!user || !verifyPassword(password, user.password)) {
     return res.status(401).json({ success: false, message: 'Incorrect email or password.' });
   }
-  return res.json({ success: true, user: publicUser(user), token: opaqueToken(user.email, user.role) });
+  return res.json({ success: true, user: publicUser(user), token: generateToken(user) });
 });
 
 /**

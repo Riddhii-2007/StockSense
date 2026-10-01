@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sparkles, Mic, Zap } from 'lucide-react';
 import { api } from '../../services/api';
 import TransactionPreview from './TransactionPreview';
+import toast from 'react-hot-toast';
 
 const CommandBar = ({ onRefresh }) => {
   const [command, setCommand] = useState('Move 30 Steel Rods from Main Store to Production Rack');
@@ -36,9 +37,10 @@ const CommandBar = ({ onRefresh }) => {
       setSimulationState(null);
       setCommand('');
       if (onRefresh) onRefresh();
+      toast.success('Transaction committed successfully');
     } catch (err) {
       console.error(err);
-      alert('Failed to commit transaction: ' + err.message);
+      toast.error('Failed to commit transaction: ' + err.message);
     } finally {
       setIsCommitting(false);
     }
@@ -90,7 +92,10 @@ const CommandBar = ({ onRefresh }) => {
             />
           </div>
           <div className="flex items-center justify-between md:justify-end gap-2 px-1">
-            <button className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors">
+            <button 
+              onClick={() => toast.success('Voice input is not supported in this browser.', { icon: '🎙️' })}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors"
+            >
               <Mic className="w-4 h-4" />
               <span className="text-xs font-semibold">Voice</span>
             </button>

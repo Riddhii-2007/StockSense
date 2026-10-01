@@ -13,6 +13,7 @@ import dbTestRoutes from './routes/dbTest.js';
 import { reseed, seedIfEmpty } from './db/seed.js';
 import { applySchema, DRIVER } from './db/index.js';
 import { checkIntegrity } from './services/integrity.js';
+import { authMiddleware } from './middleware/auth.js';
 
 const app = express();
 
@@ -20,18 +21,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Public Routes
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/operations', operationsRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/ledger', ledgerRoutes);
-app.use('/api/integrity', integrityRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/parse', parseRoutes);
 // Connectivity check. Reports the driver actually in use, plus an optional
 // Supabase PostgREST probe.
 app.use('/api', dbTestRoutes);
+
+// Protected Routes
+app.use('/api/operations', authMiddleware, operationsRoutes);
+app.use('/api/inventory', authMiddleware, inventoryRoutes);
+app.use('/api/ledger', authMiddleware, ledgerRoutes);
+app.use('/api/integrity', authMiddleware, integrityRoutes);
+app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/parse', authMiddleware, parseRoutes);
 
 // Demo helper: restore known-good seed data. Guarded so it cannot run in production.
 app.post('/api/demo/reset', async (req, res) => {
@@ -87,6 +90,9 @@ async function start() {
     console.log(`StockSense backend running on http://localhost:${config.port}`);
     console.log(`Environment: ${config.nodeEnv}`);
   });
+
+  // Workaround for Node.js issue where net.Server doesn't keep the event loop alive
+  setInterval(() => {}, 1000 * 60 * 60);
 }
 
 start().catch((err) => {

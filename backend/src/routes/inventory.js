@@ -83,20 +83,38 @@ router.get('/', async (req, res) => {
 
 /** GET /api/inventory/low-stock */
 router.get('/low-stock', async (req, res) => {
+  // LEFT JOIN ensures products that have never had a stock_by_location row
+  // (COALESCE to 0) still appear as out-of-stock rather than being invisible.
   const lowStock = await db
     .prepare(
-      `SELECT i.product_id, i.location_id, i.quantity, i.reserved,
-              i.quantity - i.reserved AS available,
+      `SELECT p.id AS product_id, COALESCE(i.location_id, NULL) AS location_id,
+              COALESCE(i.quantity, 0) AS quantity, COALESCE(i.reserved, 0) AS reserved,
+              COALESCE(i.quantity, 0) - COALESCE(i.reserved, 0) AS available,
               p.sku, p.name AS product_name, p.unit_of_measure, p.min_stock,
-              l.name AS location_name
-         FROM stock_by_location i
-         JOIN products p  ON p.id = i.product_id
-         JOIN locations l ON l.id = i.location_id
-        WHERE i.quantity - i.reserved <= p.min_stock
+              COALESCE(l.name, 'No Stock Location') AS location_name
+         FROM products p
+         LEFT JOIN stock_by_location i ON i.product_id = p.id
+         LEFT JOIN locations l ON l.id = i.location_id
+        WHERE p.active
+          AND COALESCE(i.quantity, 0) - COALESCE(i.reserved, 0) < p.min_stock
         ORDER BY available ASC`
     )
     .all();
   res.json({ success: true, lowStock });
 });
 
+/** GET /api/inventory/products/:id/locations - per-location stock for a product */
+router.get('/products/:id/locations', async (req, res) => {
+  const rows = await db
+    .prepare(
+      `SELECT l.id, l.name, l.type, COALESCE(i.quantity, 0) AS quantity, COALESCE(i.reserved, 0) AS reserved
+         FROM locations l
+         LEFT JOIN stock_by_location i ON i.location_id = l.id AND i.product_id = ?
+        ORDER BY l.name`
+    )
+    .all(req.params.id);
+  res.json({ success: true, locations: rows });
+});
+
 export default router;
+

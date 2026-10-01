@@ -1,13 +1,43 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageShell from '../components/layout/PageShell';
 import InventoryHealthWidget from '../components/dashboard/InventoryHealth';
-import { products } from '../data/mockData';
 import StatusBadge from '../components/common/StatusBadge';
-import { inventoryHealth } from '../data/mockData';
+import { api } from '../services/api';
+
+const ITEMS_PER_PAGE = 10;
 
 const InventoryHealthPage = () => {
+  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [inventoryHealth, setInventoryHealth] = useState({ healthy: 0, lowStock: 0, critical: 0, outOfStock: 0 });
+  // BUG-002 fix: proper pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    Promise.all([
+      api.getProducts(),
+      api.getDashboard()
+    ]).then(([productsData, dashboardData]) => {
+      setProducts(productsData);
+      // Compute real health counts from live product data
+      const health = { healthy: 0, lowStock: 0, critical: 0, outOfStock: 0 };
+      for (const p of productsData) {
+        if (p.status === 'Healthy') health.healthy++;
+        else if (p.status === 'Low Stock') health.lowStock++;
+        else if (p.status === 'Critical') health.critical++;
+        else if (p.status === 'Out of Stock') health.outOfStock++;
+      }
+      setInventoryHealth(health);
+    }).catch(console.error);
+  }, []);
+
+  const totalPages = Math.max(1, Math.ceil(products.length / ITEMS_PER_PAGE));
+  const paginatedProducts = products.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <PageShell title="Inventory Health" subtitle="Understand the health and risk state of your inventory">
-      
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Healthy</span>
@@ -35,7 +65,7 @@ const InventoryHealthPage = () => {
         <div className="p-6 border-b border-slate-200">
           <h3 className="text-lg font-bold text-slate-900">Product Health</h3>
         </div>
-        
+
         <div className="w-full overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap table-fixed">
             <colgroup>
@@ -59,7 +89,7 @@ const InventoryHealthPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {products.map((item) => (
+              {paginatedProducts.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50 transition-all duration-200 group relative">
                   <td className="py-4 px-6 font-semibold text-slate-900 truncate group-hover:text-indigo-600 transition-colors">{item.name}</td>
                   <td className="py-4 px-4 font-mono text-[11px] text-slate-500">{item.sku}</td>
@@ -71,12 +101,13 @@ const InventoryHealthPage = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                      <div 
+                      <div
                         className={`h-full rounded-full transition-all duration-500 ${
+                          item.stock === 0 ? 'bg-red-500' :
                           item.stock >= item.minimum * 2 ? 'bg-emerald-500' :
                           item.stock >= item.minimum ? 'bg-amber-400' : 'bg-red-500'
-                        }`} 
-                        style={{ width: `${Math.min(100, (item.stock / item.minimum) * 50)}%` }}
+                        }`}
+                        style={{ width: `${item.minimum > 0 ? Math.min(100, (item.stock / (item.minimum * 2)) * 100) : (item.stock > 0 ? 100 : 0)}%` }}
                       ></div>
                     </div>
                   </td>
@@ -84,20 +115,43 @@ const InventoryHealthPage = () => {
                     <StatusBadge status={item.status} />
                   </td>
                   <td className="py-4 px-6 text-right">
+                    {/* BUG fix: Reorder now navigates to Receipts to create a receipt */}
                     {item.status !== 'Healthy' && (
-                      <button className="px-3 py-1 bg-white border border-slate-200 text-indigo-600 font-semibold text-xs rounded shadow-sm hover:bg-slate-50 transition-colors">Reorder</button>
+                      <button
+                        onClick={() => navigate('/receipts')}
+                        className="px-3 py-1 bg-white border border-slate-200 text-indigo-600 font-semibold text-xs rounded shadow-sm hover:bg-slate-50 transition-colors"
+                      >
+                        Reorder
+                      </button>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {/* BUG-002 fix: functional pagination */}
           <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Showing {products.length} products</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              Showing {paginatedProducts.length} of {products.length} products
+            </span>
             <div className="flex items-center gap-1">
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Prev</button>
-              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">1</button>
-              <button className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors">Next</button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button className="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-center">
+                {currentPage}
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
